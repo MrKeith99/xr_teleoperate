@@ -57,7 +57,8 @@ def _openmp_threads(n: int):
 class IKWeights:
     position: float = 50.0
     rotation: float = 1.0
-    regularization: float = 0.02
+    # Upstream's 0.02 pulls reachable targets 5-7 mm toward q = 0; the smoothness term keeps solutions continuous.
+    regularization: float = 0.002
     smoothness: float = 0.1
 
 

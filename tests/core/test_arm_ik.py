@@ -93,8 +93,7 @@ def test_ik_reaches_reachable_targets(body, end_effector):
         assert np.all(solution.q >= lo - 1e-9) and np.all(solution.q <= hi + 1e-9)
         reached = ik.forward(solution.q)
         errors += [np.linalg.norm(reached[s][:3, 3] - target[s][:3, 3]) for s in ("left", "right")]
-    # The regularization and smoothness terms pull a few mm off exact targets.
-    assert np.median(errors) < 0.01
+    assert np.median(errors) < 0.005
     assert np.max(errors) < 0.03
 
 
