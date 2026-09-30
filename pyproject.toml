@@ -17,7 +17,7 @@ dependencies = [
 
 [project.optional-dependencies]
 # televuer (teleop/televuer submodule) is installed from its checkout: pip install -e teleop/televuer
-xr = ["vuer[all]==0.0.60", "logging-mp", "opencv-python"]
+xr = ["vuer[all]==0.0.60", "params-proto<3", "logging-mp", "opencv-python"]
 test = ["pytest"]
 
 [tool.setuptools.packages.find]
