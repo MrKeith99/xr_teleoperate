@@ -1,0 +1,27 @@
+[build-system]
+requires = ["setuptools>=64", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "xr_teleoperate"
+version = "0.1.0"
+description = "XR teleoperation core for Unitree G1 embodiments: XR input, composed-MJCF arm IK and hand retargeting"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+dependencies = [
+    "numpy",
+    "pin>=3.0",
+    "casadi>=3.6",
+    "huggingface_hub",
+]
+
+[project.optional-dependencies]
+# televuer (teleop/televuer submodule) is installed from its checkout: pip install -e teleop/televuer
+xr = ["vuer[all]==0.0.60", "logging-mp", "opencv-python"]
+test = ["pytest"]
+
+[tool.setuptools.packages.find]
+include = ["xr_teleoperate*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
