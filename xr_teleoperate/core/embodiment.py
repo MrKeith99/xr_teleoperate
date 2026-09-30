@@ -50,12 +50,14 @@ class Embodiment:
 
     @classmethod
     def from_robot_type(cls, robot_type: str) -> Embodiment:
+        """Parse LeRobot's robot type; a 23dof body may carry its revision (`23dof_rev_1_0`)."""
         parts = robot_type.split("-")
         if len(parts) != 5 or parts[0] != ROBOT_TYPE_PREFIX:
             raise ValueError(
                 f"Not a {ROBOT_TYPE_PREFIX}-<body>-<end_effector>-<head_mount>-<head_sensor> robot type: {robot_type!r}"
             )
-        return cls(*parts[1:])
+        body, end_effector, head_mount, head_sensor = parts[1:]
+        return cls(body.split("_", 1)[0], end_effector, head_mount, head_sensor)
 
 
 def sim_root(root: str | Path | None = None, revision: str | None = None) -> Path:

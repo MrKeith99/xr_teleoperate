@@ -7,6 +7,7 @@ def test_robot_type_round_trip():
     embodiment = Embodiment("23dof", "amazing_hand", "pan_tilt", "d455")
     assert embodiment.robot_type == "unitree_g1-23dof-amazing_hand-pan_tilt-d455"
     assert Embodiment.from_robot_type(embodiment.robot_type) == embodiment
+    assert Embodiment.from_robot_type("unitree_g1-23dof_rev_1_0-amazing_hand-pan_tilt-d455") == embodiment
 
 
 @pytest.mark.parametrize(
