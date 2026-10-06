@@ -1,9 +1,11 @@
 import math
+from multiprocessing import shared_memory
+from types import SimpleNamespace
 
 import numpy as np
 import pytest
 
-from xr_teleoperate.core.xr_input import WAIST_OFFSET, recenter_wrist, valid_pose, yaw_pitch
+from xr_teleoperate.core.xr_input import WAIST_OFFSET, XRInput, recenter_wrist, valid_pose, yaw_pitch
 
 
 def rot_z(a):
@@ -42,3 +44,58 @@ def test_singular_or_nan_poses_are_invalid():
     bad = np.eye(4)
     bad[0, 3] = np.nan
     assert not valid_pose(bad)
+
+
+class FakeWrapper:
+    def __init__(self, shm=None):
+        self.frames = []
+        self.closed = False
+        self.tvuer = SimpleNamespace(img2display_shm=shm)
+
+    def render_to_xr(self, image):
+        self.frames.append(image)
+
+    def close(self):
+        self.closed = True
+
+
+def make_xr(display_mode="ego", image_shape=(4, 6), shm=None):
+    xr = XRInput.__new__(XRInput)
+    xr.display_mode = display_mode
+    xr.image_shape = image_shape
+    xr.wrapper = FakeWrapper(shm)
+    return xr
+
+
+def test_render_is_a_no_op_in_pass_through():
+    xr = make_xr("pass-through")
+    xr.render(np.zeros((4, 6, 3), np.uint8))
+    assert xr.wrapper.frames == []
+
+
+def test_render_converts_rgb_to_bgr_for_televuer():
+    xr = make_xr()
+    image = np.zeros((4, 6, 3), np.uint8)
+    image[..., 0] = 200
+    xr.render(image)
+    sent = xr.wrapper.frames[0]
+    assert sent.dtype == np.uint8 and sent.flags["C_CONTIGUOUS"]
+    assert (sent[..., 2] == 200).all() and (sent[..., 0] == 0).all()
+    xr.render(image, rgb=False)
+    assert (xr.wrapper.frames[1][..., 0] == 200).all()
+
+
+def test_render_resizes_to_the_display_shape():
+    xr = make_xr(image_shape=(4, 6))
+    xr.render(np.full((8, 12, 3), 90, np.uint8))
+    assert xr.wrapper.frames[0].shape == (4, 6, 3)
+
+
+def test_close_releases_the_display_shared_memory():
+    shm = shared_memory.SharedMemory(create=True, size=16)
+    xr = make_xr(shm=shm)
+    xr.close()
+    assert xr.wrapper.closed
+    with pytest.raises(FileNotFoundError):
+        shared_memory.SharedMemory(name=shm.name)
+    make_xr(shm=None).close()

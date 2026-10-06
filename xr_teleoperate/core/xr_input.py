@@ -73,6 +73,7 @@ class XRInput:
         display_mode: str = "pass-through",
         image_shape: tuple[int, int] = (480, 640),
         binocular: bool = False,
+        display_fps: float = 30.0,
         cert_file: str | None = None,
         key_file: str | None = None,
     ):
@@ -81,10 +82,13 @@ class XRInput:
         from televuer import TeleVuerWrapper
 
         self.use_hands = input_mode == "hand"
+        self.display_mode = display_mode
+        self.image_shape = tuple(image_shape)
         self.wrapper = TeleVuerWrapper(
             use_hand_tracking=self.use_hands,
             binocular=binocular,
             img_shape=image_shape,
+            display_fps=display_fps,
             display_mode=display_mode,
             zmq=display_mode != "pass-through",
             cert_file=cert_file,
@@ -98,11 +102,28 @@ class XRInput:
         tele = self.wrapper.get_tele_data()
         self.yaw0 = yaw_pitch(tele.head_pose[:3, :3])[0]
 
-    def render(self, image: np.ndarray) -> None:
-        self.wrapper.render_to_xr(image)
+    def render(self, image: np.ndarray, *, rgb: bool = True) -> None:
+        """Show an HxWx3 uint8 frame in the headset; no-op in pass-through (televuer warns per call there)."""
+        if self.display_mode == "pass-through":
+            return
+        import cv2
+
+        height, width = self.image_shape[:2]
+        if image.shape[:2] != (height, width):
+            image = cv2.resize(image, (width, height), interpolation=cv2.INTER_AREA)
+        if rgb:
+            image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
+        self.wrapper.render_to_xr(np.ascontiguousarray(image, dtype=np.uint8))
 
     def close(self) -> None:
         self.wrapper.close()
+        shm = getattr(getattr(self.wrapper, "tvuer", None), "img2display_shm", None)
+        if shm is not None:
+            for release in (shm.close, shm.unlink):
+                try:
+                    release()
+                except OSError:
+                    pass
 
     def read(self) -> XRFrame:
         tv = self.wrapper.tvuer
